@@ -4,37 +4,58 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-               sh 'pipenv --python python3 sync'
+                sh 'pipenv --python python3 sync'
             }
         }
         stage('Test') {
             steps {
-               sh 'pipenv run pytest'
+                sh 'pipenv run pytest'
             }
         }
         stage('Package') {
-	    when{
-		    anyOf{ branch "master" ; branch 'release' }
-	    }
+            when{
+                anyOf{ branch "master" ; branch 'release' }
+            }
             steps {
-               sh 'zip -r sbdl.zip lib'
+                sh 'zip -r sbdl.zip lib'
             }
         }
-	stage('Release') {
-	   when{
-	      branch 'release'
-	   }
-           steps {
-              sh "scp -i /home/prashant/cred/edge-node_key.pem -o 'StrictHostKeyChecking no' -r sbdl.zip log4j.properties sbdl_main.py sbdl_submit.sh conf prashant@40.117.123.105:/home/prashant/sbdl-qa"
-           }
+        stage('Release') {
+            when{
+                branch 'release'
+            }
+            steps {
+                sh "scp -i /home/prashant/cred/edge-node_key.pem -o 'StrictHostKeyChecking no' -r sbdl.zip log4j.properties sbdl_main.py sbdl_submit.sh conf prashant@40.117.123.105:/home/prashant/sbdl-qa"
+            }
         }
-	stage('Deploy') {
-	   when{
-	      branch 'master'
-	   }
-           steps {
-               sh "scp -i /home/prashant/cred/edge-node_key.pem -o 'StrictHostKeyChecking no' -r sbdl.zip log4j.properties sbdl_main.py sbdl_submit.sh conf prashant@40.117.123.105:/home/prashant/sbdl-prod"
-           }
+        stage('Deploy') {
+            when{
+                branch 'master'
+            }
+            steps {
+                sh "scp -i /home/prashant/cred/edge-node_key.pem -o 'StrictHostKeyChecking no' -r sbdl.zip log4j.properties sbdl_main.py sbdl_submit.sh conf prashant@40.117.123.105:/home/prashant/sbdl-prod"
+            }
+        }
+        stage('Qodana') {
+            environment {
+                QODANA_TOKEN = credentials('qodana-token')
+            }
+            agent {
+                docker {
+                    args '''
+                        -v "${WORKSPACE}":/data/project
+                        --entrypoint=""
+                        '''
+                    image 'jetbrains/qodana-jvm'
+                }
+            }
+            when {
+                branch 'master'
+                branch 'feature-changes'
+            }
+            steps {
+                sh '''qodana --baseline=qodana.sarif.json'''
+            }
         }
     }
 }
