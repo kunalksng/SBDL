@@ -13,15 +13,15 @@ pipeline {
             }
         }
         stage('Package') {
-            when{
-                anyOf{ branch "master" ; branch 'release' }
+            when {
+                anyOf { branch "master"; branch 'release' }
             }
             steps {
                 sh 'zip -r sbdl.zip lib'
             }
         }
         stage('Release') {
-            when{
+            when {
                 branch 'release'
             }
             steps {
@@ -29,7 +29,7 @@ pipeline {
             }
         }
         stage('Deploy') {
-            when{
+            when {
                 branch 'master'
             }
             steps {
@@ -42,16 +42,15 @@ pipeline {
             }
             agent {
                 docker {
+                    image 'jetbrains/qodana-jvm'
                     args '''
                         -v "${WORKSPACE}":/data/project
                         --entrypoint=""
                         '''
-                    image 'jetbrains/qodana-jvm'
                 }
             }
             when {
-                branch 'master'
-                branch 'feature-changes'
+                anyOf { branch 'master'; branch 'feature-changes' }
             }
             steps {
                 sh '''qodana --baseline=qodana.sarif.json'''
