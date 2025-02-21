@@ -1,6 +1,13 @@
 pipeline {
-    agent any
-
+    agent {
+        docker {
+            image 'jetbrains/qodana-jvm'
+            args '''
+                -v "${WORKSPACE}":/data/project
+                --entrypoint=""
+            '''
+        }
+    }
     stages {
         stage('Build') {
             steps {
@@ -39,15 +46,6 @@ pipeline {
         stage('Qodana') {
             environment {
                 QODANA_TOKEN = credentials('qodana-token')
-            }
-            agent {
-                docker {
-                    image 'jetbrains/qodana-jvm'
-                    args '''
-                        -v "${WORKSPACE}":/data/project
-                        --entrypoint=""
-                    '''
-                }
             }
             when {
                 anyOf { branch 'master'; branch 'feature-changes' }
