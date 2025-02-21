@@ -46,7 +46,7 @@ pipeline {
                     args '''
                         -v "${WORKSPACE}":/data/project
                         --entrypoint=""
-                        '''
+                    '''
                 }
             }
             when {
