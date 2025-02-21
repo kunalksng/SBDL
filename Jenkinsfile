@@ -1,14 +1,6 @@
 pipeline {
-    agent {
-        docker {
-            image 'jetbrains/qodana-jvm'
-            args '''
-                -v "${WORKSPACE}":/data/project
-                --entrypoint=""
-            '''
-        }
-    }
-    
+    agent any
+
     stages {
         stage('Build') {
             steps {
@@ -50,6 +42,15 @@ pipeline {
             }
             when {
                 anyOf { branch 'master'; branch 'feature-changes' }
+            }
+            agent {
+                docker {
+                    image 'jetbrains/qodana-jvm'
+                    args '''
+                        -v "${WORKSPACE}":/data/project
+                        --entrypoint=""
+                    '''
+                }
             }
             steps {
                 sh '''qodana --baseline=qodana.sarif.json'''
