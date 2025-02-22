@@ -6,6 +6,7 @@ pipeline {
         PATH = "$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
         REPO_URL = 'git@github.com:kunalksng/SBDL.git'
         BRANCH_NAME = 'release' // Change to 'master' for production deployment
+        PYTHONPATH = "$WORKSPACE" // Add the workspace directory to PYTHONPATH
     }
 
     stages {
@@ -18,17 +19,26 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 sh '''
+                echo "Setting up Python environment..."
                 python3 -m venv venv          # Create a virtual environment
                 . venv/bin/activate            # Activate the virtual environment
+                pip install --upgrade pip       # Upgrade pip to the latest version
                 pip install pipenv             # Install pipenv within the virtual environment
                 pipenv --python python3 sync  # Sync dependencies with pipenv
+                echo "Python environment setup complete."
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '. venv/bin/activate && pipenv run pytest'  // Run tests within the virtual environment
+                sh '''
+                echo "Running tests..."
+                . venv/bin/activate
+                export PYTHONPATH=$PYTHONPATH:$WORKSPACE  # Ensure lib is in PYTHONPATH
+                pipenv run pytest
+                echo "Tests completed."
+                '''
             }
         }
 
@@ -37,7 +47,11 @@ pipeline {
                 anyOf { branch 'master'; branch 'release' }
             }
             steps {
-                sh 'zip -r sbdl.zip lib conf log4j.properties main.py sbdl_submit.sh'
+                sh '''
+                echo "Packaging application..."
+                zip -r sbdl.zip lib conf log4j.properties main.py sbdl_submit.sh
+                echo "Application packaged successfully."
+                '''
             }
         }
 
@@ -61,10 +75,4 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed! Please check the logs.'
-        }
-    }
-}
+            echo 'Pipeline completed successfully!
