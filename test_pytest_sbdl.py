@@ -1,6 +1,6 @@
 import pytest
 from chispa import assert_df_equality
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from pyspark.sql.types import StructType, StructField, StringType, NullType, TimestampType, ArrayType, DateType, Row
 
@@ -189,8 +189,29 @@ def test_read_accounts(spark):
     assert accounts_df.count() == 8
 
 
+
+def normalize_timestamp(ts):
+    return ts.astimezone(timezone.utc)
+
 def test_read_parties_row(spark, expected_party_rows):
     actual_party_rows = DataLoader.read_parties(spark, "LOCAL", False, None).collect()
+    # Normalize timestamps in both expected and actual rows
+    expected_party_rows = [Row(
+        load_date=row.load_date,
+        account_id=row.account_id,
+        party_id=row.party_id,
+        relation_type=row.relation_type,
+        relation_start_date=normalize_timestamp(row.relation_start_date)
+        for row in expected_party_rows
+    ]
+    actual_party_rows = [Row(
+        load_date=row.load_date,
+        account_id=row.account_id,
+        party_id=row.party_id,
+        relation_type=row.relation_type,
+        relation_start_date=normalize_timestamp(row.relation_start_date)
+        for row in actual_party_rows
+    ]
     assert expected_party_rows == actual_party_rows
 
 
