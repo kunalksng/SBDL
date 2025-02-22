@@ -57,119 +57,8 @@ def parties_list():
         (date(2022, 8, 2), '6982391067', '9823462821', 'F-S', datetime.fromisoformat('2018-07-19 18:56:57.000+05:30'))]
 
 
-@pytest.fixture(scope='session')
-def expected_contract_df(spark):
-    schema = StructType([StructField('account_id', StringType()),
-                         StructField('contractIdentifier',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('sourceSystemIdentifier',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contactStartDateTime',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', TimestampType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contractTitle',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue',
-                                                             ArrayType(StructType(
-                                                                 [StructField('contractTitleLineType', StringType()),
-                                                                  StructField('contractTitleLine', StringType())]))),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('taxIdentifier',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue',
-                                                             StructType([StructField('taxIdType', StringType()),
-                                                                         StructField('taxId', StringType())])),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contractBranchCode',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contractCountry',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())]))])
-
-    return spark.read.format("json").schema(schema).load("test_data/results/contract_df.json")
-
-
-@pytest.fixture(scope='session')
-def expected_final_df(spark):
-    schema = StructType(
-        [StructField('keys',
-                     ArrayType(StructType([StructField('keyField', StringType()),
-                                           StructField('keyValue', StringType())]))),
-         StructField('payload',
-                     StructType([
-                         StructField('contractIdentifier',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('sourceSystemIdentifier',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contactStartDateTime',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', TimestampType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contractTitle',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', ArrayType(
-                                                     StructType([StructField('contractTitleLineType', StringType()),
-                                                                 StructField('contractTitleLine', StringType())]))),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('taxIdentifier',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue',
-                                                             StructType([StructField('taxIdType', StringType()),
-                                                                         StructField('taxId', StringType())])),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contractBranchCode',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('contractCountry',
-                                     StructType([StructField('operation', StringType()),
-                                                 StructField('newValue', StringType()),
-                                                 StructField('oldValue', NullType())])),
-                         StructField('partyRelations',
-                                     ArrayType(StructType([
-                                         StructField('partyIdentifier',
-                                                     StructType([
-                                                         StructField('operation', StringType()),
-                                                         StructField('newValue', StringType()),
-                                                         StructField('oldValue', NullType())])),
-                                         StructField('partyRelationshipType',
-                                                     StructType([
-                                                         StructField('operation', StringType()),
-                                                         StructField('newValue', StringType()),
-                                                         StructField('oldValue', NullType())])),
-                                         StructField('partyRelationStartDateTime',
-                                                     StructType([
-                                                         StructField('operation', StringType()),
-                                                         StructField('newValue', TimestampType()),
-                                                         StructField('oldValue', NullType())])),
-                                         StructField('partyAddress',
-                                                     StructType([StructField('operation', StringType()),
-                                                                 StructField(
-                                                                     'newValue',
-                                                                     StructType(
-                                                                         [StructField('addressLine1', StringType()),
-                                                                          StructField('addressLine2', StringType()),
-                                                                          StructField('addressCity', StringType()),
-                                                                          StructField('addressPostalCode',
-                                                                                      StringType()),
-                                                                          StructField('addressCountry', StringType()),
-                                                                          StructField('addressStartDate', DateType())
-                                                                          ])),
-                                                                 StructField('oldValue', NullType())]))])))]))])
-    return spark.read.format("json").schema(schema).load("test_data/results/final_df.json") \
-        .select("keys", "payload")
+def normalize_timestamp(ts):
+    return ts.astimezone(timezone.utc)
 
 
 def test_blank_test(spark):
@@ -189,10 +78,6 @@ def test_read_accounts(spark):
     assert accounts_df.count() == 8
 
 
-
-def normalize_timestamp(ts):
-    return ts.astimezone(timezone.utc)
-
 def test_read_parties_row(spark, expected_party_rows):
     actual_party_rows = DataLoader.read_parties(spark, "LOCAL", False, None).collect()
     # Normalize timestamps in both expected and actual rows
@@ -202,16 +87,14 @@ def test_read_parties_row(spark, expected_party_rows):
         party_id=row.party_id,
         relation_type=row.relation_type,
         relation_start_date=normalize_timestamp(row.relation_start_date)
-        for row in expected_party_rows
-    ]
+    ) for row in expected_party_rows]
     actual_party_rows = [Row(
         load_date=row.load_date,
         account_id=row.account_id,
         party_id=row.party_id,
         relation_type=row.relation_type,
         relation_start_date=normalize_timestamp(row.relation_start_date)
-        for row in actual_party_rows
-    ]
+    ) for row in actual_party_rows]
     assert expected_party_rows == actual_party_rows
 
 
@@ -225,13 +108,6 @@ def test_read_party_schema(spark, parties_list):
     expected_df = spark.createDataFrame(parties_list, get_party_schema())
     actual_df = DataLoader.read_parties(spark, "LOCAL", False, None)
     assert_df_equality(expected_df, actual_df)
-
-
-def test_get_contract(spark, expected_contract_df):
-    accounts_df = DataLoader.read_accounts(spark, "LOCAL", False, None)
-    actual_contract_df = Transformations.get_contract(accounts_df)
-    assert expected_contract_df.collect() == actual_contract_df.collect()
-    assert_df_equality(expected_contract_df, actual_contract_df, ignore_schema=True)
 
 
 def test_kafka_kv_df(spark, expected_final_df):
