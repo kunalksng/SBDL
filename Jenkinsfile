@@ -23,6 +23,7 @@ pipeline {
                 python3 -m venv venv          # Create a virtual environment
                 . venv/bin/activate            # Activate the virtual environment
                 pip install --upgrade pip       # Upgrade pip to the latest version
+                pip install pyspark==3.5.4     # Install compatible PySpark version
                 pip install pipenv             # Install pipenv within the virtual environment
                 pipenv --python python3 sync  # Sync dependencies with pipenv
                 echo "Python environment setup complete."
