@@ -17,6 +17,7 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
+                sh 'pip install pipenv'  // Install pipenv if not installed
                 sh 'pipenv --python python3 sync'
             }
         }
@@ -38,7 +39,7 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch 'release'  // Change to 'master' for production deployment
+                anyOf { branch 'master'; branch 'release' }
             }
             steps {
                 sh '''
