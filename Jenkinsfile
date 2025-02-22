@@ -17,14 +17,18 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
-                sh 'pip install pipenv'  // Install pipenv if not installed
-                sh 'pipenv --python python3 sync'
+                sh '''
+                python3 -m venv venv          # Create a virtual environment
+                . venv/bin/activate            # Activate the virtual environment
+                pip install pipenv             # Install pipenv within the virtual environment
+                pipenv --python python3 sync  # Sync dependencies with pipenv
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'pipenv run pytest'
+                sh '. venv/bin/activate && pipenv run pytest'  // Run tests within the virtual environment
             }
         }
 
@@ -39,7 +43,7 @@ pipeline {
 
         stage('Deploy') {
             when {
-                anyOf { branch 'master'; branch 'release' }
+                branch 'release'  // Change to 'master' for production deployment
             }
             steps {
                 sh '''
